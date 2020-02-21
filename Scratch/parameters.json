@@ -1,0 +1,63 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "extensions_setupdnsfirewall_fileUris": {
+            "value": null
+        },
+        "extensions_setupdnsfirewall_storageAccountName": {
+            "value": null
+        },
+        "extensions_setupdnsfirewall_storageAccountKey": {
+            "value": null
+        },
+        "extensions_setupdnsfirewall_commandToExecute": {
+            "value": null
+        },
+        "virtualMachines_Jumpbox_name": {
+            "value": null
+        },
+        "networkInterfaces_vmnic_name": {
+            "value": null
+        },
+        "virtualNetworks_HubVnet_name": {
+            "value": null
+        },
+        "routeTables_workload_udr_name": {
+            "value": null
+        },
+        "virtualNetworks_SpokeVnet_name": {
+            "value": null
+        },
+        "virtualMachines_dnsforwarder_name": {
+            "value": null
+        },
+        "managedClusters_aks_name": {
+            "value": null
+        },
+        "azureFirewalls_SharedFirewall_name": {
+            "value": null
+        },
+        "networkInterfaces_JumpboxVMNic_name": {
+            "value": null
+        },
+        "networkSecurityGroups_proxy_nsg_name": {
+            "value": null
+        },
+        "networkSecurityGroups_jumpbox_nsg_name": {
+            "value": null
+        },
+        "publicIPAddresses_JumpboxPublicIP_name": {
+            "value": null
+        },
+        "networkSecurityGroups_workload_nsg_name": {
+            "value": null
+        },
+        "availabilitySets_dnsforwarder_avail_name": {
+            "value": null
+        },
+        "publicIPAddresses_SharedFirewall_pip_name": {
+            "value": null
+        }
+    }
+}

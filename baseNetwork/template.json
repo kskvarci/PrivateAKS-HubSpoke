@@ -1,0 +1,288 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-11-01",
+            "name": "jumpbox-nsg",
+            "location": "eastus2",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "ssh-inbound",
+                        "properties": {
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "65.190.18.112/32",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-11-01",
+            "name": "proxy-nsg",
+            "location": "eastus2",
+            "properties": {
+                "securityRules": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-11-01",
+            "name": "workload-nsg",
+            "location": "eastus2",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "Allow-Ingress",
+                        "properties": {
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "10.0.0.0/8",
+                            "destinationAddressPrefix": "10.1.0.200",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    },
+                    {
+                        "name": "DenyAll80",
+                        "properties": {
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "10.0.0.0/8",
+                            "destinationAddressPrefix": "10.1.0.0/16",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    },
+                    {
+                        "name": "AllowInterVnet80",
+                        "properties": {
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "10.1.0.0/16",
+                            "destinationAddressPrefix": "10.1.0.0/16",
+                            "access": "Allow",
+                            "priority": 999,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2019-11-01",
+            "name": "hub-vnet",
+            "location": "eastus2",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'proxy-nsg')]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'jumpbox-nsg')]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": []
+                },
+                "subnets": [
+                    {
+                        "name": "AzureFirewallSubnet",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24",
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Enabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
+                    },
+                    {
+                        "name": "proxy-subnet",
+                        "properties": {
+                            "addressPrefix": "10.0.1.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'proxy-nsg')]"
+                            },
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Enabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
+                    },
+                    {
+                        "name": "jumpbox-subnet",
+                        "properties": {
+                            "addressPrefix": "10.0.2.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'jumpbox-nsg')]"
+                            },
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Enabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
+                    },
+                    {
+                        "name": "dns-subnet",
+                        "properties": {
+                            "addressPrefix": "10.0.3.0/24",
+                            "serviceEndpoints": [],
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Enabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
+                    }
+                ],
+                "enableDdosProtection": false,
+                "enableVmProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2019-11-01",
+            "name": "spoke-vnet",
+            "location": "eastus2",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'workload-nsg')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'hub-vnet')]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.1.0.0/16"
+                    ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": [
+                        "10.0.3.4"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "appgw-subnet",
+                        "properties": {
+                            "addressPrefix": "10.1.1.0/24",
+                            "serviceEndpoints": [],
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Enabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
+                    },
+                    {
+                        "name": "workload-subnet",
+                        "properties": {
+                            "addressPrefix": "10.1.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'workload-nsg')]"
+                            },
+                            "serviceEndpoints": [],
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
+                    }
+                ],
+                "enableDdosProtection": false,
+                "enableVmProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2019-11-01",
+            "name": "[concat('spoke-vnet', '/workload-subnet')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'spoke-vnet')]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'workload-nsg')]"
+            ],
+            "properties": {
+                "addressPrefix": "10.1.0.0/24",
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'workload-nsg')]"
+                },
+                "serviceEndpoints": [],
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled"
+            }
+        },
+        
+        {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2019-11-01",
+            "name": "[concat('hub-vnet', '/hubtospoke')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'spoke-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'hub-vnet')]"
+            ],
+            "properties": {
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'spoke-vnet')]"
+                },
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": false,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteAddressSpace": {
+                    "addressPrefixes": [
+                        "10.1.0.0/16"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2019-11-01",
+            "name": "[concat('spoke-vnet', '/spoketohub')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'spoke-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'hub-vnet')]"
+            ],
+            "properties": {
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'hub-vnet')]"
+                },
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": false,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteAddressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                }
+            }
+        }
+    ]
+}

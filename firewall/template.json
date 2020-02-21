@@ -1,0 +1,599 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2019-11-01",
+            "name": "firewall-pip",
+            "location": "eastus2",
+            "sku": {
+                "name": "Standard"
+            },
+            "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/azureFirewalls",
+            "apiVersion": "2019-11-01",
+            "name": "firewall",
+            "location": "eastus2",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'firewall-pip')]"
+            ],
+            "properties": {
+                "sku": {
+                    "name": "AZFW_VNet",
+                    "tier": "Standard"
+                },
+                "threatIntelMode": "Alert",
+                "additionalProperties": {},
+                "ipConfigurations": [
+                    {
+                        "name": "FW-config",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'firewall-pip')]"
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'hub-vnet', 'AzureFirewallSubnet')]"
+                            }
+                        }
+                    }
+                ],
+                "networkRuleCollections": [
+                    {
+                        "name": "AKS-NetCol",
+                        "properties": {
+                            "priority": 202,
+                            "action": {
+                                "type": "Allow"
+                            },
+                            "rules": [
+                                {
+                                    "name": "Allow-UbuntuNTP",
+                                    "protocols": [
+                                        "UDP"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "destinationAddresses": [
+                                        "91.189.89.198",
+                                        "91.189.89.199",
+                                        "91.189.94.4",
+                                        "91.189.91.157"
+                                    ],
+                                    "sourceIpGroups": [],
+                                    "destinationIpGroups": [],
+                                    "destinationFqdns": [],
+                                    "destinationPorts": [
+                                        "123"
+                                    ]
+                                },
+                                {
+                                    "name": "Allow-MasterConn",
+                                    "protocols": [
+                                        "TCP"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "destinationAddresses": [
+                                        "*"
+                                    ],
+                                    "sourceIpGroups": [],
+                                    "destinationIpGroups": [],
+                                    "destinationFqdns": [],
+                                    "destinationPorts": [
+                                        "22",
+                                        "9000"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "applicationRuleCollections": [
+                    {
+                        "name": "AKS-ReqCol",
+                        "properties": {
+                            "priority": 200,
+                            "action": {
+                                "type": "Allow"
+                            },
+                            "rules": [
+                                {
+                                    "name": "Allow-API1",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "*.hcp.eastus2.azmk8s.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-API2",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "*.tun.eastus2.azmk8s.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-ACR",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "aksrepos.azurecr.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-ImageBlob",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "*.blob.core.windows.net"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-MCR",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "mcr.microsoft.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-MCRStorage",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "*.cdn.mscr.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-KubeGetPut",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "management.azure.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-AAD",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "login.microsoftonline.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-ACS",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "acs-mirror.azureedge.net"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "AKS-OptCol",
+                        "properties": {
+                            "priority": 201,
+                            "action": {
+                                "type": "Allow"
+                            },
+                            "rules": [
+                                {
+                                    "name": "Allow-NodeUpdates",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Http",
+                                            "port": 80
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "security.ubuntu.com",
+                                        "azure.archive.ubuntu.com",
+                                        "changelogs.ubuntu.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-MSAPT",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "packages.microsoft.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-MonitorMetricsVS",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "dc.services.visualstudio.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-MonitorMetricsInsights",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "*.opinsights.azure.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-MonitorMetricsInsights2",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "scus-agentservice-prod-1.azure-automation.net"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-MonitorMetricsMonitoring",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "*.monitoring.azure.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-AzurePol",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "gov-prod-policy-data.trafficmanager.net"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-GPUAPT",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "apt.dockerproject.org"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-GPUNVid",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "nvidia.github.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-Dockercloudflare",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "production.cloudflare.docker.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-DockerIO",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "*.docker.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-GCRIO",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "gcr.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-GoogleStorage",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "storage.googleapis.com"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-k8s",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "k8s.gcr.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-quay",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "quay.io"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                },
+                                {
+                                    "name": "Allow-cloudfront",
+                                    "protocols": [
+                                        {
+                                            "protocolType": "Https",
+                                            "port": 443
+                                        }
+                                    ],
+                                    "fqdnTags": [],
+                                    "targetFqdns": [
+                                        "*.cloudfront.net"
+                                    ],
+                                    "sourceAddresses": [
+                                        "10.1.0.0/24"
+                                    ],
+                                    "sourceIpGroups": []
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "natRuleCollections": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/routeTables",
+            "apiVersion": "2019-11-01",
+            "name": "workload-udr",
+            "location": "eastus2",
+            "properties": {
+                "disableBgpRoutePropagation": false,
+                "routes": [
+                    {
+                        "name": "DG-Route",
+                        "properties": {
+                            "addressPrefix": "0.0.0.0/0",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "10.0.0.4"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2019-11-01",
+            "name": "[concat('spoke-vnet', '/workload-subnet')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/routeTables', 'workload-udr')]"
+            ],
+            "properties": {
+                "addressPrefix": "10.1.0.0/24",
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'workload-nsg')]"
+                },
+                "serviceEndpoints": [],
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled",
+                "routeTable": {
+                    "id": "[resourceId('Microsoft.Network/routeTables', 'workload-udr')]"
+                }
+            }
+        }
+    ]
+}
