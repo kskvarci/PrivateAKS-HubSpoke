@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#  only doing all the sudos as cloud-init doesn't run as root, likely better to use Azure VM Extensions
+#  only doing all the sudos as cloud-init doesn't run as root,  likely better to use Azure VM Extensions
 #
 #  $1 is the forwarder, $2 is the vnet IP range
 #
